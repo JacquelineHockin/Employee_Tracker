@@ -20,7 +20,7 @@ function questionsPrompt() {
             value: "VIEW_DEPARTMENTS",
           },
           {
-            name: "view all the employees by the role",
+            name: "view all the roles",
             value: "VIEW_ROLE",
           },
           {
@@ -66,7 +66,7 @@ function questionsPrompt() {
           addDepartment();
           break;
         case "ADD_ROLE":
-          addROLE();
+          addRole();
           break;
         default:
           quit();
@@ -95,4 +95,137 @@ function viewRole() {
     questionsPrompt();
   });
 }
+
+function addEmployee() {
+  connection.query("select * from role", (err, res) => {
+    if (err) throw err;
+    inquirer
+      .prompt([
+        {
+          type: "input",
+          name: "firstName",
+          message: "what is the new employee's first name?",
+        },
+        {
+          type: "input",
+          name: "lastName",
+          message: "what is the new employee's last name?",
+        },
+        {
+          type: "list",
+          name: "title",
+          message: "what is the role of the new employee?",
+          choices: res.map((role) => role.title),
+        },
+      ])
+      .then((data) => {
+        let role = res.find((role) => role.title === data.title);
+        connection.query("insert into employee set ?", {
+          first_name: data.firstName,
+          last_name: data.lastName,
+          role_id: role.id,
+        });
+        questionsPrompt();
+      });
+  });
+}
+
+function addDepartment() {
+  connection.query("select * from department", (err, res) => {
+    if (err) throw err;
+    inquirer
+      .prompt([
+        {
+          type: "input",
+          name: "departmentName",
+          message: "What Department would you like to add?",
+        },
+      ])
+      .then((data) => {
+        connection.query("insert into department set ?", {
+          name: data.departmentName,
+        });
+        console.log(`added ${data.departmentName} to list of departments`);
+        questionsPrompt();
+      });
+  });
+}
+
+function addRole() {
+  connection.query("select * from department", (err, res) => {
+    if (err) throw err;
+    inquirer
+      .prompt([
+        {
+          type: "input",
+          name: "title",
+          message: "What is the title of this role?",
+        },
+        {
+          type: "input",
+          name: "salary",
+          message: "What is the salary of this role?",
+        },
+        {
+          type: "list",
+          name: "name",
+          message: "What department is this role in?",
+          choices: res.map((department) => department.name),
+        },
+      ])
+      .then((data) => {
+        let department = res.find(
+          (department) => department.name === data.name
+        );
+        connection.query("insert into role set ?", {
+          title: data.title,
+          salary: data.salary,
+          department_id: department.id,
+        });
+        console.log(`added ${data.title} to list of roles`);
+        questionsPrompt();
+      });
+  });
+}
+
+function updateEmployeeRole() {
+  connection.query("select * from employee", (err, employeeData) => {
+    if (err) throw err;
+    connection.query("select * from role", (err, roleData) => {
+      inquirer
+        .prompt([
+          {
+            type: "list",
+            name: "employee",
+            message: "Who is the employee you want to update?",
+            choices: employeeData.map((employee) => {
+              return {
+                name: employee.first_name + " " + employee.last_name,
+                value: employee.id,
+              };
+            }),
+          },
+          {
+            type: "list",
+            name: "role",
+            message: "What is the role you want to update?",
+            choices: roleData.map((role) => {
+              return { name: role.title, value: role.id };
+            }),
+          },
+        ])
+        .then((userAnswers) => {
+          connection.query(
+            "update employee set role_id = ? where id = ?",
+            [userAnswers.role, userAnswers.employee],
+            (err, roleData) => {
+              console.log("user updated!");
+              questionsPrompt();
+            }
+          );
+        });
+    });
+  });
+}
+
 questionsPrompt();
